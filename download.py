@@ -12,7 +12,7 @@ def main():
 
     # Parse HTML
     images = get_url_data(url)
-    print(*images, sep='\n')
+    print(*images, sep="\n")
 
     # Exit if no images found.
     img_len = len(images)
@@ -25,7 +25,7 @@ def main():
     new_folder = create_folder()
 
     # Download image files
-    dl = download_images(images=images, filepath=new_folder)
+    dl = download_images(url=url, images=images, filepath=new_folder)
 
     # Show results. Delete newly created folder if no images downloaded.
     r = result(image_count=dl,
@@ -81,27 +81,44 @@ def create_folder():
             continue
 
 
-def download_images(images, filepath):
+def download_images(url, images, filepath):
     count = 0
+    # Attempt to obtain content of image
     for i, image in enumerate(images):
-        # Attempt to obtain content of image
+
+        # Combine URL & image strings if http/s not found
+        if not image.startswith("https") or not image.startswith("http"):
+            image = f"{url}{image}"
+
         try:
             r = requests.get(image).content
             name, ext = os.path.splitext(image)
+            print(name, ext)
+
             # Force .png file extension if none present
             if ext == "":
                 ext = ".png"
+            # Generate correct extensions
+            elif len(ext) > 4:
+                ext = ext[:4]
+            elif ext.startswith(".jpeg"):
+                ext = ".jpeg"
+
             try:
                 # possibility of decode
                 r = str(r, 'utf-8')
+
             except UnicodeDecodeError:
                 # Download image after checking above condition
                 with open(f"{filepath}/image{i+1}{ext}", "wb+") as f:
                     f.write(r)
+
                 # Track number of downloaded images
                 count += 1
+
         except Exception:
             continue
+
     return count
 
 
