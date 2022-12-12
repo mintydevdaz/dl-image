@@ -11,17 +11,21 @@ def main():
     url = validate_url()
 
     # Parse HTML
-    images = get_url_data(url)
+    extract = get_url_data(url)
 
-    # !! DELETE
-    # print(*images, sep='\n')
+    # Get list of images
+    images = get_soup_image(extract)
 
     # Exit if no images found.
     img_len = len(images)
     if not img_len:
-        sys.exit("No images found on webpage")
+        sys.exit("Unable to grab images from website.")
     else:
         print(f"Number of images found: {img_len}")
+
+    # Ask user if they'll continue if high volume of images found
+    if img_len >= 50:
+        choice(img_len)
 
     # Create folder
     new_folder = create_folder()
@@ -45,15 +49,15 @@ def validate_url():
 
 
 def get_url_data(url):
-    # Get content of url
     try:
+        # Get content of url
         headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.6.1 Safari/605.1.15"
             }
         r = requests.get(url, headers=headers, timeout=5)
         r.raise_for_status()
     except requests.exceptions.HTTPError as e:
-        sys.exit(f"Error reaching page: {e}")
+        sys.exit(f"Error reaching page! Additional details:\n**{e}**\n")
     except requests.exceptions.Timeout:
         sys.exit("Request timed out. Try again later.")
 
@@ -61,14 +65,54 @@ def get_url_data(url):
     soup = BeautifulSoup(r.text, features='lxml')
 
     # Find image tags
-    extract = soup.findAll(name='img')
+    return soup.findAll(name='img')
 
+
+def get_soup_image(extract):
     # Get list of images. Exit if error.
+    img_1 = []
+    img_2 = []
+    img_3 = []
+    img_4 = []
     try:
-        img_list = [image['src'] for image in extract]
-    except KeyError as e:
-        sys.exit(f"Can't extract images from webpage. Error: {e}")
-    return img_list
+        img_1 = [image['src'] for image in extract]
+    except Exception:
+        try:
+            img_2 = [image['data-src'] for image in extract]
+        except Exception:
+            try:
+                img_3 = [image['data-srcset'] for image in extract]
+            except Exception:
+                try:
+                    img_4 = [image['data-fallback-src'] for image in extract]
+                except Exception:
+                    pass
+    # !! Delete
+    # print("List 1")
+    # print(*img_1, sep='\n')
+    # print("List 2")
+    # print(*img_2, sep='\n')
+    # print("List 3")
+    # print(*img_3, sep='\n')
+    # print("List 4")
+    # print(*img_4, sep='\n')
+    return img_1 + img_2 + img_3 + img_4
+
+
+def choice(img_len):
+    while True:
+        try:
+            decision = str(input(
+                "High volume of images found. Continue (y/n)? "
+                )).lower()
+            if decision in {'n', 'no'}:
+                sys.exit("User decided to terminate program.")
+            elif decision in {'y', 'yes'}:
+                break
+            else:
+                continue
+        except Exception:
+            continue
 
 
 def create_folder():
@@ -82,7 +126,7 @@ def create_folder():
 
             # Check / create final path
             if not os.path.exists(parent_dir):
-                sys.exit("Abort operation. Path to desktop not found")
+                sys.exit("Operation aborted. Path to desktop not found")
             else:
                 path = os.path.join(parent_dir, folder_name)
 
@@ -102,7 +146,7 @@ def download_images(url, images, filepath):
     for i, image in enumerate(images):
 
         # Combine URL & image strings if http/s not found
-        if not image.startswith("https") or not image.startswith("http"):
+        if not image.startswith("http") or not image.startswith("https"):
             image = f"{url}{image}"
 
         try:
@@ -112,21 +156,16 @@ def download_images(url, images, filepath):
             r = requests.get(image, headers=headers).content
             name, ext = os.path.splitext(image)
 
-            # !! DELETE
-            # print(name, ext)
-
-            # Manipulate file extensions when image is saved
+            # Check file extension. Force .png if incorrect format.
             html_ext = [
                 '.apng', '.gif', '.ico', '.jpg', '.jpeg', '.png', '.svg'
                 ]
             if ext == "" or ext not in html_ext:
                 ext = ".png"
-            elif ext.startswith(".jpeg"):
-                ext = ".jpeg"
 
             try:
                 # possibility of decode
-                r = str(r, 'utf-8')
+                r = str(r, encoding='utf-8')
 
             except UnicodeDecodeError:
                 # Download image after checking above condition
