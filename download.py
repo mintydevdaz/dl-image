@@ -12,6 +12,7 @@ def main():
 
     # Parse HTML
     images = get_url_data(url)
+    print(*images, sep='\n')
 
     # Exit if no images found.
     img_len = len(images)
@@ -108,7 +109,7 @@ def result(image_count, list_of_images, filepath):
     # Delete folder if no images downloaded
     if image_count == 0:
         Path(filepath).rmdir()
-        return "No images downloaded."
+        return "Unable to download images. New folder deleted."
 
     # Show total images downloaded
     if image_count == list_of_images:
