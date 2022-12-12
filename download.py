@@ -12,7 +12,9 @@ def main():
 
     # Parse HTML
     images = get_url_data(url)
-    print(*images, sep="\n")
+
+    # !! DELETE
+    # print(*images, sep='\n')
 
     # Exit if no images found.
     img_len = len(images)
@@ -28,14 +30,14 @@ def main():
     dl = download_images(url=url, images=images, filepath=new_folder)
 
     # Show results. Delete newly created folder if no images downloaded.
-    r = result(image_count=dl,
-               list_of_images=img_len,
-               filepath=new_folder
-               )
-    print(r)
+    print(result(image_count=dl,
+                 list_of_images=img_len,
+                 filepath=new_folder
+                 ))
 
 
 def validate_url():
+    # Validate URL input with validators module
     url = str(input("Enter URL: "))
     if not validators.url(url):
         sys.exit("Invalid URL. Try again.")
@@ -43,12 +45,17 @@ def validate_url():
 
 
 def get_url_data(url):
-    # Content of URL
-    r = requests.get(url)
-
-    # Exit if response is not 200
-    if r.status_code != 200:
-        sys.exit(f"Error reaching page. Status code: {r.status_code}")
+    # Get content of url
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.6.1 Safari/605.1.15"
+            }
+        r = requests.get(url, headers=headers, timeout=5)
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        sys.exit(f"Error reaching page: {e}")
+    except requests.exceptions.Timeout:
+        sys.exit("Request timed out. Try again later.")
 
     # Parse HTML
     soup = BeautifulSoup(r.text, features='lxml')
@@ -69,13 +76,21 @@ def create_folder():
         try:
             # Request Folder name
             folder_name = str(input("Enter folder name: "))
-            # Point to 'Downloads' folder on Mac
-            parent_dir = str(Path.home() / "Downloads")
-            # Create final path
-            path = os.path.join(parent_dir, folder_name)
+
+            # Points to Desktop regardles of system platform
+            parent_dir = str(Path.home() / "Desktop")
+
+            # Check / create final path
+            if not os.path.exists(parent_dir):
+                sys.exit("Abort operation. Path to desktop not found")
+            else:
+                path = os.path.join(parent_dir, folder_name)
+
             # Create folder
             os.mkdir(path)
             return path
+
+        # Raise error if folder name already exists
         except OSError as e:
             print(e)
             continue
@@ -91,16 +106,21 @@ def download_images(url, images, filepath):
             image = f"{url}{image}"
 
         try:
-            r = requests.get(image).content
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.6.1 Safari/605.1.15"
+                }
+            r = requests.get(image, headers=headers).content
             name, ext = os.path.splitext(image)
-            print(name, ext)
 
-            # Force .png file extension if none present
-            if ext == "":
+            # !! DELETE
+            # print(name, ext)
+
+            # Manipulate file extensions when image is saved
+            html_ext = [
+                '.apng', '.gif', '.ico', '.jpg', '.jpeg', '.png', '.svg'
+                ]
+            if ext == "" or ext not in html_ext:
                 ext = ".png"
-            # Generate correct extensions
-            elif len(ext) > 4:
-                ext = ext[:4]
             elif ext.startswith(".jpeg"):
                 ext = ".jpeg"
 
@@ -130,9 +150,9 @@ def result(image_count, list_of_images, filepath):
 
     # Show total images downloaded
     if image_count == list_of_images:
-        return "All images downloaded!"
+        return f"All images downloaded!\nFiles saved in: {filepath}"
     else:
-        return f"Total images downloaded: {image_count}"
+        return f"Images downloaded: {image_count}\nFiles saved in: {filepath}"
 
 
 if __name__ == "__main__":
