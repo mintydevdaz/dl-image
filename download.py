@@ -1,53 +1,61 @@
 import os
 import sys
 import requests
-from bs4 import BeautifulSoup
+import validators
 from pathlib import Path
+from bs4 import BeautifulSoup
 
 
 def main():
-    # Ask User for valid URL
-    url = str(input("Enter URL: "))
+    # Ask user for valid URL
+    url = validate_url()
 
     # Parse HTML
-    images = get_url(url)
+    images = get_url_data(url)
 
-    # Check if any images found
-    if not len(images):
+    # Exit if no images found.
+    img_len = len(images)
+    if not img_len:
         sys.exit("No images found on webpage")
+    else:
+        print(f"Number of images found: {img_len}")
 
     # Create folder
-    path = create_folder(images)
-
-    # Show total no. of images found
-    print(f"Number of Images Found: {len(images)}")
+    new_folder = create_folder()
 
     # Download image files
-    num = download(images, path)
+    dl = download_images(images=images, filepath=new_folder)
 
-    # Show total images downloaded
-    if num == len(images):
-        print("All images downloaded!")
-    else:
-        print(f"Total images downloaded: {num}")
-
-    # Delete folder if no images downloaded
-    if num == 0:
-        Path(path).rmdir()
-        print("No images downloaded. Folder removed.")
+    # Show results. Delete newly created folder if no images downloaded.
+    r = result(image_count=dl,
+               list_of_images=img_len,
+               filepath=new_folder
+               )
+    print(r)
 
 
-def get_url(url):
+def validate_url():
+    url = str(input("Enter URL: "))
+    if not validators.url(url):
+        sys.exit("Invalid URL. Try again.")
+    return url
+
+
+def get_url_data(url):
     # Content of URL
     r = requests.get(url)
+
     # Exit if response is not 200
     if r.status_code != 200:
         sys.exit(f"Error reaching page. Status code: {r.status_code}")
-    # Parse HTML code
+
+    # Parse HTML
     soup = BeautifulSoup(r.text, features='lxml')
-    # Find all Images in URL
+
+    # Find image tags
     extract = soup.findAll(name='img')
-    # Return list of image objects
+
+    # Get list of images. Exit if error.
     try:
         img_list = [image['src'] for image in extract]
     except KeyError as e:
@@ -55,12 +63,12 @@ def get_url(url):
     return img_list
 
 
-def create_folder(images):
+def create_folder():
     while True:
         try:
             # Request Folder name
             folder_name = str(input("Enter folder name: "))
-            # Point to Downloads folder
+            # Point to 'Downloads' folder on Mac
             parent_dir = str(Path.home() / "Downloads")
             # Create final path
             path = os.path.join(parent_dir, folder_name)
@@ -72,7 +80,7 @@ def create_folder(images):
             continue
 
 
-def download(images, path):
+def download_images(images, filepath):
     count = 0
     for i, image in enumerate(images):
         # Attempt to obtain content of image
@@ -87,13 +95,26 @@ def download(images, path):
                 r = str(r, 'utf-8')
             except UnicodeDecodeError:
                 # Download image after checking above condition
-                with open(f"{path}/image{i+1}{ext}", "wb+") as f:
+                with open(f"{filepath}/image{i+1}{ext}", "wb+") as f:
                     f.write(r)
                 # Track number of downloaded images
                 count += 1
         except Exception:
             continue
     return count
+
+
+def result(image_count, list_of_images, filepath):
+    # Delete folder if no images downloaded
+    if image_count == 0:
+        Path(filepath).rmdir()
+        return "No images downloaded."
+
+    # Show total images downloaded
+    if image_count == list_of_images:
+        return "All images downloaded!"
+    else:
+        return f"Total images downloaded: {image_count}"
 
 
 if __name__ == "__main__":
