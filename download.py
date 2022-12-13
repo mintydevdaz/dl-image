@@ -8,10 +8,11 @@ from bs4 import BeautifulSoup
 
 def main():
     # Ask user for valid URL
-    url = validate_url()
+    url = str(input("Enter URL: "))
+    valid_url = validate_url(url)
 
     # Parse HTML
-    extract = get_url_data(url)
+    extract = get_url_data(valid_url)
 
     # Get list of images
     images = get_soup_image(extract)
@@ -40,9 +41,7 @@ def main():
                  ))
 
 
-def validate_url():
-    # Validate URL input with validators module
-    url = str(input("Enter URL: "))
+def validate_url(url):
     if not validators.url(url):
         sys.exit("Invalid URL. Try again.")
     return url
@@ -51,9 +50,7 @@ def validate_url():
 def get_url_data(url):
     try:
         # Get content of url
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.6.1 Safari/605.1.15"
-            }
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"} # noqa
         r = requests.get(url, headers=headers, timeout=5)
         r.raise_for_status()
     except requests.exceptions.HTTPError as e:
@@ -65,7 +62,7 @@ def get_url_data(url):
     soup = BeautifulSoup(r.text, features='lxml')
 
     # Find image tags
-    return soup.findAll(name='img')
+    return soup.findAll('img')
 
 
 def get_soup_image(extract):
@@ -87,15 +84,6 @@ def get_soup_image(extract):
                     img_4 = [image['data-fallback-src'] for image in extract]
                 except Exception:
                     pass
-    # !! Delete
-    # print("List 1")
-    # print(*img_1, sep='\n')
-    # print("List 2")
-    # print(*img_2, sep='\n')
-    # print("List 3")
-    # print(*img_3, sep='\n')
-    # print("List 4")
-    # print(*img_4, sep='\n')
     return img_1 + img_2 + img_3 + img_4
 
 
@@ -104,7 +92,7 @@ def choice(img_len):
         try:
             decision = str(input(
                 "High volume of images found. Continue (y/n)? "
-                )).lower()
+            )).lower()
             if decision in {'n', 'no'}:
                 sys.exit("User decided to terminate program.")
             elif decision in {'y', 'yes'}:
@@ -150,16 +138,14 @@ def download_images(url, images, filepath):
             image = f"{url}{image}"
 
         try:
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.6.1 Safari/605.1.15"
-                }
+            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"} # noqa
             r = requests.get(image, headers=headers).content
             name, ext = os.path.splitext(image)
 
             # Check file extension. Force .png if incorrect format.
             html_ext = [
                 '.apng', '.gif', '.ico', '.jpg', '.jpeg', '.png', '.svg'
-                ]
+            ]
             if ext == "" or ext not in html_ext:
                 ext = ".png"
 
