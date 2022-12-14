@@ -54,7 +54,7 @@ def get_url_data(url):
         r = requests.get(url, headers=headers, timeout=5)
         r.raise_for_status()
     except requests.exceptions.HTTPError as e:
-        sys.exit(f"Error reaching page! Additional details:\n**{e}**\n")
+        sys.exit(f"Error reaching page! Additional details:\n** {e} **\n")
     except requests.exceptions.Timeout:
         sys.exit("Request timed out. Try again later.")
 
@@ -109,7 +109,7 @@ def create_folder():
             # Request Folder name
             folder_name = str(input("Enter folder name: "))
 
-            # Points to Desktop regardles of system platform
+            # Points to Desktop regardless of system platform
             parent_dir = str(Path.home() / "Desktop")
 
             # Check / create final path
