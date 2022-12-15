@@ -1,11 +1,11 @@
 import os
 import sys
+import bs4
 import requests
 import validators
-import bs4
-from pathlib import Path
 from PIL import Image
 from io import BytesIO
+from pathlib import Path
 from bs4 import BeautifulSoup
 
 
@@ -19,8 +19,11 @@ def main():
     # Parse HTML
     extract = parse_request(response)
 
+    # Exit if Shopify-built website
+    shopify(extract[0])
+
     # Extract src objects from <img> tags
-    images = get_soup_image(extract)
+    images = get_soup_image(extract[1])
 
     # Exit if no image URLs extracted
     img_len = len(images)
@@ -51,7 +54,8 @@ def validate_url() -> str:
 
 def get_request(url: str) -> requests.models.Response:
     '''
-    Attempts to get response from URL. Exits program if page can't be reached. Exits program if there's a request timeout.
+    Attempts to get response from URL. Exits program if page can't be reached.
+    Exits program if there's a request timeout.
 
     :param url: URL
     :type url: str
@@ -69,19 +73,23 @@ def get_request(url: str) -> requests.models.Response:
     return r
 
 
-def parse_request(response: requests.models.Response) -> bs4.element.ResultSet:
-    '''
-    Finds and returns image tags
-
-    :param response: requests.get object
-    :type response: requests.models.Response
-    :return: Beautiful Soup object with html <img> tags
-    :rtype: bs4.element.ResultSet
-    '''
+def parse_request(response: requests.models.Response) -> tuple: # noqa
+    '''Finds and returns image and link tags'''
     # Parse HTML
     soup = BeautifulSoup(response.text, features='lxml')
+    # Find all links
+    links = soup.findAll('link', href=True)
     # Find image tags
-    return soup.findAll('img')
+    img = soup.findAll('img')
+    return links, img
+
+
+def shopify(links: bs4.element.ResultSet):
+    check = [link['href'] for link in links]
+    for c in check:
+        if 'shopify' in c:
+            sys.exit(
+                "Unable to scrape Shopify website. Operation aborted.") # noqa
 
 
 def get_soup_image(extract: bs4.element.ResultSet) -> list[str]:
