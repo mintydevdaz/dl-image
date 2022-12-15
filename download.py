@@ -89,7 +89,7 @@ def shopify(links: bs4.element.ResultSet):
     for c in check:
         if 'shopify' in c:
             sys.exit(
-                "Unable to scrape Shopify website. Operation aborted.") # noqa
+                "Shopify detected! Unable to scrape Shopify-built websites. Operation aborted.") # noqa
 
 
 def get_soup_image(extract: bs4.element.ResultSet) -> list[str]:
