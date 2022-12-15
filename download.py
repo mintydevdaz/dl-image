@@ -4,25 +4,35 @@ import requests
 import validators
 import bs4
 from pathlib import Path
+from PIL import Image
+from io import BytesIO
 from bs4 import BeautifulSoup
 
 
 def main():
+    # Get valid URL
     url = validate_url()
 
-    extract = parse_request(get_request(url))
+    # Request URL
+    response = get_request(url)
 
+    # Parse HTML
+    extract = parse_request(response)
+
+    # Extract src objects from <img> tags
     images = get_soup_image(extract)
 
+    # Exit if no image URLs extracted
     img_len = len(images)
     image_found(img_len)
 
+    # User choice to exit if 50+ image URLs found
     if img_len >= 50:
         choice(img_len)
 
+    # Create directory on User Desktop
     new_folder = create_folder()
 
-    # Download image files
     dl = download_images(url=url, images=images, filepath=new_folder)
 
     print(result(image_count=dl,
@@ -32,13 +42,7 @@ def main():
 
 
 def validate_url() -> str:
-    '''
-    Request URL from User. Check validity using
-    validators module. Exit program if invalid.
-
-    :return: valid URL
-    :rtype: str
-    '''
+    '''Validates URL input from User'''
     url = str(input("Enter URL: "))
     if not validators.url(url):
         sys.exit("Invalid URL. Try again.")
@@ -47,9 +51,7 @@ def validate_url() -> str:
 
 def get_request(url: str) -> requests.models.Response:
     '''
-    Attempts to get response from URL.
-    Exits program if page can't be reached.
-    Exits program if there's a request timeout.
+    Attempts to get response from URL. Exits program if page can't be reached. Exits program if there's a request timeout.
 
     :param url: URL
     :type url: str
@@ -83,35 +85,26 @@ def parse_request(response: requests.models.Response) -> bs4.element.ResultSet:
 
 
 def get_soup_image(extract: bs4.element.ResultSet) -> list[str]:
-    '''
-    Obtain list of 'src' URLS from <img> tags.
-
-    :param extract: Beautiful Soup object with html <img> tags
-    :type extract: bs4.element.ResultSet
-    :return: List of image 'src' URLs
-    :rtype: list[str]
-    '''
-    img_1 = []
-    img_2 = []
-    img_3 = []
-    img_4 = []
-    try:
-        img_1 = [image['src'] for image in extract]
-    except Exception:
+    '''Extract URLs from <img> tags'''
+    # sourcery skip: for-append-to-extend, use-contextlib-suppress
+    image_src_list = []
+    tags = ['src', 'srcset', 'data-src', 'data-srcset', 'data-fallback-src']
+    for tag in tags:
         try:
-            img_2 = [image['data-src'] for image in extract]
+            for img in extract:
+                image_src_list.append(img[tag])
         except Exception:
-            try:
-                img_3 = [image['data-srcset'] for image in extract]
-            except Exception:
-                try:
-                    img_4 = [image['data-fallback-src'] for image in extract]
-                except Exception:
-                    pass
-    return img_1 + img_2 + img_3 + img_4
+            pass
+
+        if image_src_list:
+            break
+        else:
+            continue
+
+    return image_src_list
 
 
-def image_found(img_len: int) -> None:
+def image_found(img_len: int):
     '''Exit if no images found else print image count to terminal'''
     if not img_len:
         sys.exit("Unable to grab images from website.")
@@ -119,7 +112,7 @@ def image_found(img_len: int) -> None:
         print(f"Number of images found: {img_len}")
 
 
-def choice(img_len: int) -> None:
+def choice(img_len: int):
     '''Prompt User to exit program if too many images found'''
     while True:
         try:
@@ -176,27 +169,32 @@ def download_images(url, images, filepath):
         # Combine URL & image strings if http(s) not found
         image = check_http(url, image)
 
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"}  # noqa
+
         try:
-            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"}  # noqa
-            r = requests.get(image, headers=headers).content
-
-            # Check file extension. Force .png if incorrect format.
-            check_ext = check_extension(image)
-
-            try:
-                # possibility of decode
-                r = str(r, encoding='utf-8')
-
-            except UnicodeDecodeError:
-                # Download image after checking above condition
-                with open(f"{filepath}/image{i+1}{check_ext}", "wb+") as f:
-                    f.write(r)
-
-                # Track number of downloaded images
-                count += 1
-
+            r = requests.get(image, headers=headers, timeout=1).content
         except Exception:
             continue
+
+        # Check file extension. Force .png if incorrect format.
+        ext = check_extension(image)
+
+        # Open Image
+        try:
+            im = Image.open(BytesIO(r))
+        except Exception:
+            continue
+
+        # Save File
+        filename = f"image{i+1}{ext}"
+        path = os.path.join(filepath, filename)
+        try:
+            im.save(path)
+        except Exception:
+            continue
+
+        # Track number of downloaded images
+        count += 1
 
     return count
 
@@ -219,18 +217,7 @@ def check_extension(image: str) -> str:
 
 
 def result(image_count: int, image_num: int, filepath: str) -> str:
-    '''
-    Prints final result of program to Command-Line.
-
-    :param image_count: Total count of succesfully downloaded images
-    :type image_count: int
-    :param image_num: Total count of images intially parsed from URL
-    :type image_num: int
-    :param filepath: Filepath to Desktop
-    :type filepath: str
-    :return: CLI response to User
-    :rtype: str
-    '''
+    '''Prints final result of program to Command-Line'''
 
     # Delete folder if no images downloaded
     if image_count == 0:
