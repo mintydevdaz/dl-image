@@ -10,6 +10,9 @@ from bs4 import BeautifulSoup
 
 
 def main():
+    # Greeting
+    hello_world()
+
     # Get valid URL
     url = validate_url()
 
@@ -44,6 +47,13 @@ def main():
                  ))
 
 
+def hello_world():
+    print("_____________________________________________________")
+    print("Welcome to the Image Download tool")
+    print("Press 'Ctrl+c' if the program appears unresponsive.")
+    print("_____________________________________________________")
+
+
 def validate_url() -> str:
     '''Validates URL input from User'''
     url = str(input("Enter URL: "))
@@ -73,7 +83,7 @@ def get_request(url: str) -> requests.models.Response:
     return r
 
 
-def parse_request(response: requests.models.Response) -> tuple: # noqa
+def parse_request(response: requests.models.Response) -> tuple:  # noqa
     '''Finds and returns image and link tags'''
     # Parse HTML
     soup = BeautifulSoup(response.text, features='lxml')
@@ -89,7 +99,7 @@ def shopify(links: bs4.element.ResultSet):
     for c in check:
         if 'shopify' in c:
             sys.exit(
-                "Shopify detected! Unable to scrape Shopify-built websites. Operation aborted.") # noqa
+                "Shopify detected! Unable to scrape Shopify-built websites. Operation aborted.")  # noqa
 
 
 def get_soup_image(extract: bs4.element.ResultSet) -> list[str]:
@@ -180,7 +190,7 @@ def download_images(url, images, filepath):
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"}  # noqa
 
         try:
-            r = requests.get(image, headers=headers, timeout=1).content
+            r = requests.get(image, headers=headers).content
         except Exception:
             continue
 
