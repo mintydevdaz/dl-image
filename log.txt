@@ -1,0 +1,17 @@
+## Test Log
+
+#### Successful (all images downloaded)
+
+-   https://www.abc.net.au
+
+#### Errors
+
+-   https://www.popsockets.com (cannot identify image file <\_io.BytesIO object at 0x1066889a0>)
+-   https://theconversation.com/au (cannot identify image file <\_io.BytesIO object at 0x103d15da0>)
+
+#### Shopify Websites (successful termination)
+
+-   https://www.shopify.com/au/blog/shopify-stores
+-   https://www.skwosh.com.au
+-   https://www.jbhifi.com.au
+-   https://dailyclack.com

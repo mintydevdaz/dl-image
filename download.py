@@ -39,7 +39,14 @@ def main():
     # Create directory on User Desktop
     new_folder = create_folder()
 
-    dl = download_images(url=url, images=images, filepath=new_folder)
+    # Attempt to download images
+    print("Attempting to download images files...")
+    dl = download_images(
+        url=url,
+        images=images,
+        filepath=new_folder,
+        img_len=img_len
+        )
 
     print(result(image_count=dl,
                  image_num=img_len,
@@ -179,10 +186,19 @@ def create_folder() -> str:
             continue
 
 
-def download_images(url, images, filepath):
-    count = 0
+def download_images(url, images, filepath, img_len):
+    image_download_counter = 0
+    error_tolerance = int(img_len * 0.1)
+    os_error_log = []
     # Attempt to obtain content of image
     for i, image in enumerate(images):
+
+        # Naively check error log. Abort operation at 10:
+        if len(os_error_log) == error_tolerance:
+            print("***Operation aborted - too many errors found***")
+            print("Error log:")
+            print(*os_error_log, sep='\n')
+            sys.exit()
 
         # Combine URL & image strings if http(s) not found
         image = check_http(url, image)
@@ -190,31 +206,35 @@ def download_images(url, images, filepath):
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"}  # noqa
 
         try:
+            # Request bytes content from image URL
             r = requests.get(image, headers=headers).content
-        except Exception:
-            continue
 
-        # Check file extension. Force .png if incorrect format.
-        ext = check_extension(image)
+            # Check file extension. Force .png if incorrect format.
+            ext = check_extension(image)
 
-        # Open Image
-        try:
-            im = Image.open(BytesIO(r))
-        except Exception:
-            continue
+            # Decode bytes
+            try:
+                im = Image.open(BytesIO(r))
+            except OSError as e:
+                os_error_log.append(f" - IMG{i+1}: {e}")
+                continue
 
-        # Save File
-        filename = f"image{i+1}{ext}"
-        path = os.path.join(filepath, filename)
-        try:
+            # Save File
+            filename = f"image{i+1}{ext}"
+            path = os.path.join(filepath, filename)
+
+            # TODO - Consider wrapping with try/except
+            # Attempt to save to FilePath
             im.save(path)
-        except Exception:
+
+            # Track number of downloaded images
+            image_download_counter += 1
+
+        except Exception as error:
+            os_error_log.append(error)
             continue
 
-        # Track number of downloaded images
-        count += 1
-
-    return count
+    return image_download_counter
 
 
 def check_http(url: str, image: str) -> str:
