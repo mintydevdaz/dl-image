@@ -55,10 +55,10 @@ def main():
 
 
 def hello_world():
-    print("_____________________________________________________")
+    print("-----------------------------------------------------")
     print("Welcome to the Image Download tool")
     print("Press 'Ctrl+c' if the program appears unresponsive.")
-    print("_____________________________________________________")
+    print("-----------------------------------------------------")
 
 
 def validate_url() -> str:
@@ -188,17 +188,19 @@ def create_folder() -> str:
 
 def download_images(url, images, filepath, img_len):
     image_download_counter = 0
-    error_tolerance = int(img_len * 0.1)
+    error_tolerance = int(img_len * 0.2)
     os_error_log = []
     # Attempt to obtain content of image
     for i, image in enumerate(images):
 
         # Naively check error log. Abort operation at 10:
         if len(os_error_log) == error_tolerance:
-            print("***Operation aborted - too many errors found***")
-            print("Error log:")
+            print("***Operation aborted - too many errors found***\nError log:")
             print(*os_error_log, sep='\n')
-            sys.exit()
+            if image_download_counter == 0:
+                Path(filepath).rmdir()
+                print("New folder deleted.")
+            sys.exit('-----------------------------------------------------')
 
         # Combine URL & image strings if http(s) not found
         image = check_http(url, image)
