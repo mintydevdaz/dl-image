@@ -1,16 +1,17 @@
 import os
 import sys
+from io import BytesIO
+from pathlib import Path
+
 import bs4
 import requests
 import validators
-from PIL import Image
-from io import BytesIO
-from pathlib import Path
 from bs4 import BeautifulSoup
+from PIL import Image
 
 
 def main():
-    # Greeting
+    # Start program
     hello_world()
 
     # Get valid URL
@@ -20,13 +21,10 @@ def main():
     response = get_request(url)
 
     # Parse HTML
-    extract = parse_request(response)
-
-    # Exit if Shopify-built website
-    shopify(extract[0])
+    data = parse(response)
 
     # Extract src objects from <img> tags
-    images = get_soup_image(extract[1])
+    images = get_soup_image(data[1])
 
     # Exit if no image URLs extracted
     img_len = len(images)
@@ -38,6 +36,10 @@ def main():
 
     # Create directory on User Desktop
     new_folder = create_folder()
+
+    # Updates Image URLs if webpage built with Shopify
+    if check_shopify(data[0]):
+        images = shopify_check_http(images)
 
     # Attempt to download images
     print("Attempting to download images files...")
@@ -62,7 +64,6 @@ def hello_world():
 
 
 def validate_url() -> str:
-    '''Validates URL input from User'''
     url = str(input("Enter URL: "))
     if not validators.url(url):
         sys.exit("Invalid URL. Try again.")
@@ -70,15 +71,6 @@ def validate_url() -> str:
 
 
 def get_request(url: str) -> requests.models.Response:
-    '''
-    Attempts to get response from URL. Exits program if page can't be reached.
-    Exits program if there's a request timeout.
-
-    :param url: URL
-    :type url: str
-    :return: requests object
-    :rtype: requests.models.Response
-    '''
     try:
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"}  # noqa
         r = requests.get(url, headers=headers, timeout=5)
@@ -90,8 +82,7 @@ def get_request(url: str) -> requests.models.Response:
     return r
 
 
-def parse_request(response: requests.models.Response) -> tuple:  # noqa
-    '''Finds and returns image and link tags'''
+def parse(response: requests.models.Response) -> tuple:  # noqa
     # Parse HTML
     soup = BeautifulSoup(response.text, features='lxml')
     # Find all links
@@ -101,32 +92,15 @@ def parse_request(response: requests.models.Response) -> tuple:  # noqa
     return links, img
 
 
-def shopify(links: bs4.element.ResultSet):
-    check = [link['href'] for link in links]
-    for c in check:
-        if 'shopify' in c:
-            sys.exit(
-                "Shopify detected! Unable to scrape Shopify-built websites. Operation aborted.")  # noqa
-
-
-def get_soup_image(extract: bs4.element.ResultSet) -> list[str]:
-    '''Extract URLs from <img> tags'''
-    # sourcery skip: for-append-to-extend, use-contextlib-suppress
-    image_src_list = []
+def get_soup_image(data: bs4.element.ResultSet) -> list[str]:
+    img_list = []
     tags = ['src', 'srcset', 'data-src', 'data-srcset', 'data-fallback-src']
-    for tag in tags:
-        try:
-            for img in extract:
-                image_src_list.append(img[tag])
-        except Exception:
-            pass
-
-        if image_src_list:
-            break
-        else:
-            continue
-
-    return image_src_list
+    for t in tags:
+        for i in data:
+            if i.get(t) is not None:
+                item = i.get(t)
+                img_list.append(item)
+    return img_list
 
 
 def image_found(img_len: int):
@@ -155,13 +129,6 @@ def choice(img_len: int):
 
 
 def create_folder() -> str:
-    '''
-    Create new folder in Desktop directory. Exit if Desktop path not found.
-    Continue prompt if filename already exists on Desktop.
-
-    :return: file path to Desktop
-    :rtype: str
-    '''
     while True:
         try:
             # Request Folder name
@@ -195,7 +162,7 @@ def download_images(url, images, filepath, img_len):
 
         # Naively check error log. Abort operation at 10:
         if len(os_error_log) == error_tolerance:
-            print("***Operation aborted - too many errors found***\nError log:")
+            print("**Operation aborted - too many errors found**\nError log:")
             print(*os_error_log, sep='\n')
             if image_download_counter == 0:
                 Path(filepath).rmdir()
@@ -239,8 +206,22 @@ def download_images(url, images, filepath, img_len):
     return image_download_counter
 
 
+def check_shopify(links: bs4.element.ResultSet):
+    check = [link['href'] for link in links]
+    count = sum('shopify' in url for url in check)
+    return count > 0
+
+
+def shopify_check_http(images: list[str]) -> list[str]:
+    new_links = []
+    for image in images:
+        if not image.startswith('http') or not image.startswith('https'):
+            image = f"https:{image}"
+            new_links.append(image)
+    return new_links
+
+
 def check_http(url: str, image: str) -> str:
-    '''Modifies image URL if HTTP not present'''
     if not image.startswith("http") or not image.startswith("https"):
         return f"{url}{image}"
     else:
