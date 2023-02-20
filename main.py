@@ -50,8 +50,8 @@ def main():
         img_len=img_len
         )
 
-    print(result(image_count=dl,
-                 image_num=img_len,
+    print(result(image_download_counter=dl,
+                 num_images=img_len,
                  filepath=new_folder
                  ))
 
@@ -59,7 +59,7 @@ def main():
 def hello_world():
     print("-----------------------------------------------------")
     print("Welcome to the Image Download tool")
-    print("Press 'Ctrl+c' if the program appears unresponsive.")
+    print("Press 'Ctrl+c' to manually abort program")
     print("-----------------------------------------------------")
 
 
@@ -160,7 +160,7 @@ def download_images(url, images, filepath, img_len):
     # Attempt to obtain content of image
     for i, image in enumerate(images):
 
-        # Naively check error log. Abort operation at 10:
+        # Naively check error log. Abort operation if error tolerance met.
         if len(os_error_log) == error_tolerance:
             print("**Operation aborted - too many errors found**\nError log:")
             print(*os_error_log, sep='\n')
@@ -237,19 +237,19 @@ def check_extension(image: str) -> str:
     return ext
 
 
-def result(image_count: int, image_num: int, filepath: str) -> str:
+def result(image_download_counter: int, num_images: int, filepath: str) -> str:
     '''Prints final result of program to Command-Line'''
 
     # Delete folder if no images downloaded
-    if image_count == 0:
+    if image_download_counter == 0:
         Path(filepath).rmdir()
         return "Unable to download images. New folder deleted."
 
     # Show total images downloaded
-    if image_count == image_num:
+    if image_download_counter == num_images:
         return f"All images downloaded!\nFiles saved in: {filepath}"
     else:
-        return f"Images downloaded: {image_count}\nFiles saved in: {filepath}"
+        return f"Images downloaded: {image_download_counter}\nFiles saved in: {filepath}" # noqa
 
 
 if __name__ == "__main__":
