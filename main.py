@@ -57,10 +57,11 @@ def main():
 
 
 def hello_world():
-    print("-----------------------------------------------------")
+    x = "=" * 40
+    print(f"{x}")
     print("Welcome to the Image Download tool")
     print("Press 'Ctrl+c' to manually abort program")
-    print("-----------------------------------------------------")
+    print(f"{x}")
 
 
 def validate_url() -> str:
@@ -167,7 +168,8 @@ def download_images(url, images, filepath, img_len):
             if image_download_counter == 0:
                 Path(filepath).rmdir()
                 print("New folder deleted.")
-            sys.exit('-----------------------------------------------------')
+            x = "=" * 40
+            sys.exit(f"{x}")
 
         # Combine URL & image strings if http(s) not found
         image = check_http(url, image)
